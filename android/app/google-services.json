@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "618250606941",
+    "firebase_url": "https://bd-appesc-default-rtdb.firebaseio.com",
+    "project_id": "bd-appesc",
+    "storage_bucket": "bd-appesc.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:618250606941:android:174dd27b29993dc80430b4",
+        "android_client_info": {
+          "package_name": "com.ejemplo.school_management_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "618250606941-s977bo789307utqeu8m50r0a45so7rbi.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ejemplo.school_management_app",
+            "certificate_hash": "46170445e1186f71a7dab2243aa7f32d3e0bbffb"
+          }
+        },
+        {
+          "client_id": "618250606941-g1961rram7aum00ibljtg040uqg8a3tu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCPukXJgCJSIy1gMU-HV3crhc8QWQLWnAM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "618250606941-g1961rram7aum00ibljtg040uqg8a3tu.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
