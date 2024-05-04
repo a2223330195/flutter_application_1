@@ -4,7 +4,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:school_management_app/Vista/vista_login.dart';
 import 'package:school_management_app/Vista/vista_clases.dart';
-import 'package:school_management_app/Controlador/controlador_authservice.dart';
 
 final Logger logger = Logger('Main');
 
@@ -24,16 +23,9 @@ void main() async {
   bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
   String? idToken = prefs.getString('idToken');
 
-  if (idToken != null) {
-    // Intenta autenticar al usuario con el token almacenado
-    AuthService authService = AuthService();
-    try {
-      await authService.auth.signInWithCustomToken(idToken);
-      isLoggedIn = true;
-    } catch (e) {
-      // El token no es válido o ha expirado
-      isLoggedIn = false;
-    }
+  if (idToken == null) {
+    isLoggedIn = false;
+    await prefs.setBool('isLoggedIn', false);
   }
 
   runApp(MyApp(isLoggedIn: isLoggedIn));

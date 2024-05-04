@@ -35,23 +35,17 @@ class VistaLoginState extends State<VistaLogin> {
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser != null) {
-        final User? user = (await _authService.signInWithGoogle());
+        final User? user = await _authService.signInWithGoogle();
         if (user != null) {
           String? idToken = await user.getIdToken();
           if (idToken != null) {
             await prefs.setString('idToken', idToken);
+            await prefs.setBool('isLoggedIn', true);
+            return true;
           }
-        }
-        await prefs.setBool('isLoggedIn', true);
-        return true;
-      } else {
-        await prefs.setBool('isLoggedIn', false);
-        if (mounted) {
-          showErrorSnackBar('Inicio de sesión con Google cancelado');
         }
       }
     } catch (error) {
-      await prefs.setBool('isLoggedIn', false);
       logger.log(Level.SEVERE, 'Error en signInWithGoogle: $error');
       if (mounted) {
         showErrorSnackBar('Error al iniciar sesión con Google');
@@ -62,16 +56,15 @@ class VistaLoginState extends State<VistaLogin> {
 
   Future<void> saveLoginStateAndNavigate(Widget page) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isLoggedIn', true);
-    String? idToken = await _authService.auth.currentUser?.getIdToken();
+    String? idToken = prefs.getString('idToken');
     if (idToken != null) {
-      await prefs.setString('idToken', idToken);
-    }
-    if (mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => page),
-      );
+      await _authService.signInWithCustomToken(idToken);
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => page),
+        );
+      }
     }
   }
 
@@ -105,18 +98,17 @@ class VistaLoginState extends State<VistaLogin> {
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: () {
-                    signInWithGoogle().then((success) {
-                      if (success) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) {
-                              return const VistaClases();
-                            },
-                          ),
-                        );
-                      }
-                    });
+                  onPressed: () async {
+                    bool success = await ignInWithGoogle();
+                    if (success) {
+                      Navigator.pushReplacement(
+                        // ignore: use_build_context_synchronously
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const VistaClases(),
+                        ),
+                      );
+                    }
                   },
                   child: const Text('Sign in with Google'),
                 ),

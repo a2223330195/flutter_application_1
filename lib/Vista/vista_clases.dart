@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:school_management_app/Vista/vista_login.dart';
 import 'package:school_management_app/Modelo/modelo_clase.dart';
 import 'package:school_management_app/Vista/vista_detalle_clase.dart';
@@ -58,6 +59,7 @@ class VistaClasesState extends State<VistaClases> {
   }
 
   Future<bool> _onWillPop() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
     return (await showDialog(
           context: context,
           builder: (context) => AlertDialog(
@@ -70,7 +72,9 @@ class VistaClasesState extends State<VistaClases> {
                 child: const Text('No'),
               ),
               TextButton(
-                onPressed: () {
+                onPressed: () async {
+                  await prefs.remove('idToken');
+                  await prefs.setBool('isLoggedIn', false);
                   _authService.signOutGoogle();
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(builder: (context) => const VistaLogin()),
