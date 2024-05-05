@@ -27,13 +27,16 @@ class VistaClasesState extends State<VistaClases> {
         MaterialPageRoute(builder: (context) => const NuevaClase()),
       ).then((resultado) {
         if (resultado is Clase) {
+          final claseId = _firestore.collection('Clases').doc().id;
           _firestore
               .collection('Profesores')
               .doc(_currentUserUid)
               .collection('Clases')
-              .add({
+              .doc(claseId)
+              .set({
             'Clase': resultado.nombre,
             'Horario': resultado.horario,
+            'profesorId': _currentUserUid,
           });
         }
       });
@@ -122,7 +125,9 @@ class VistaClasesState extends State<VistaClases> {
                     children:
                         snapshot.data?.docs.map((DocumentSnapshot document) {
                               Clase clase = Clase.fromMap(
-                                  document.data() as Map<String, dynamic>);
+                                document.data() as Map<String, dynamic>,
+                                document.id, // Agregar esta línea
+                              );
                               return GestureDetector(
                                 onTap: () {
                                   Navigator.push(

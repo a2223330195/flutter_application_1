@@ -1,53 +1,58 @@
 import 'package:flutter/material.dart';
+import 'package:school_management_app/Vista/vista_tareas.dart';
 import 'package:school_management_app/Modelo/modelo_clase.dart';
+import 'package:school_management_app/Vista/vista_examenes.dart';
+import 'package:school_management_app/Vista/vista_calificaciones.dart';
+import 'package:school_management_app/Vista/vista_pase_lista.dart'; // Importa las nuevas vistas aquí
 
-class DetalleClase extends StatelessWidget {
+class DetalleClase extends StatefulWidget {
   final Clase clase;
 
   const DetalleClase({super.key, required this.clase});
 
-  Future<bool> _onWillPop(BuildContext context) async {
-    return await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('¿Estás seguro?'),
-            content: const Text('¿Quieres salir de la pantalla de detalles?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('No'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Sí'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+  @override
+  DetalleClaseState createState() => DetalleClaseState();
+}
+
+class DetalleClaseState extends State<DetalleClase>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 4, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // ignore: deprecated_member_use
-    return WillPopScope(
-      onWillPop: () => _onWillPop(context),
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(clase.nombre),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.clase.nombre),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Pasar Lista'),
+            Tab(text: 'Calificaciones'),
+            Tab(text: 'Tareas'),
+            Tab(text: 'Exámenes'),
+          ],
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Horario: ${clase.horario}',
-                  style: Theme.of(context).textTheme.titleLarge),
-              // Agrega aquí más información sobre la clase
-            ],
-          ),
-        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          VistaPaseList(clase: widget.clase),
+          VistaCalificaciones(clase: widget.clase),
+          VistaTareas(clase: widget.clase),
+          VistaExamenes(clase: widget.clase),
+        ],
       ),
     );
   }
