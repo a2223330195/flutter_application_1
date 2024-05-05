@@ -23,12 +23,11 @@ class VistaPaseListState extends State<VistaPaseList> {
   ];
   DateTime _fechaSeleccionada = DateTime.now();
   bool _mostrarCalendario = false;
-  Map<String, bool> asistenciaActual = {};
 
   Future<void> guardarAsistencia(
-      String alumnoId, bool presente, String dia) async {
+      String alumnoId, int estado, String dia) async {
     final fechaFormateada = DateFormat('yyyy-MM-dd').format(_fechaSeleccionada);
-    final documentId = '$alumnoId-$dia-$fechaFormateada';
+    final documentId = '$dia-$fechaFormateada';
 
     try {
       await _firestore
@@ -36,14 +35,12 @@ class VistaPaseListState extends State<VistaPaseList> {
           .doc(widget.clase.profesorId)
           .collection('Clases')
           .doc(widget.clase.id)
-          .collection('asistencia')
+          .collection('alumnos')
+          .doc(alumnoId)
+          .collection('asistencias')
           .doc(documentId)
-          .set({'presente': presente});
-
-      // Actualizar _asistenciaActual
-      asistenciaActual[alumnoId] = presente;
+          .set({'estado': estado});
     } catch (e) {
-      // ignore: avoid_print
       print('Error al guardar la asistencia: $e');
     }
   }
@@ -108,6 +105,15 @@ class VistaPaseListState extends State<VistaPaseList> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_today),
+            onPressed: _toggleCalendario,
+          ),
+          // Otros IconButtons aquí
+        ],
+      ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestore
             .collection('Profesores')
@@ -157,25 +163,34 @@ class VistaPaseListState extends State<VistaPaseList> {
                                     .doc(widget.clase.profesorId)
                                     .collection('Clases')
                                     .doc(widget.clase.id)
-                                    .collection('asistencia')
+                                    .collection('alumnos')
+                                    .doc(alumnoId)
+                                    .collection('asistencias')
                                     .doc(
-                                        '$alumnoId-$dia-${DateFormat('yyyy-MM-dd').format(_fechaSeleccionada)}')
+                                        '$dia-${DateFormat('yyyy-MM-dd').format(_fechaSeleccionada)}')
                                     .snapshots(),
                                 builder: (context, snapshot) {
-                                  final presente =
-                                      asistenciaActual[alumnoId] ?? false;
+                                  final estado = snapshot.hasData &&
+                                          snapshot.data!.data() != null
+                                      ? (snapshot.data!.data() as Map<String,
+                                              dynamic>)['estado'] ??
+                                          0
+                                      : 0;
                                   return GestureDetector(
                                     onTap: () {
-                                      final nuevoValor = !presente;
+                                      final nuevoValor = (estado + 1) % 3;
                                       guardarAsistencia(
                                           alumnoId, nuevoValor, dia);
                                     },
-                                    child: presente
-                                        ? const Icon(Icons.check_box,
-                                            color: Colors.green)
-                                        : const Icon(
-                                            Icons.indeterminate_check_box,
-                                            color: Colors.red),
+                                    child: estado == 0
+                                        ? const Icon(Icons.remove,
+                                            color: Colors.grey)
+                                        : estado == 1
+                                            ? const Icon(Icons.check_box,
+                                                color: Colors.green)
+                                            : const Icon(
+                                                Icons.indeterminate_check_box,
+                                                color: Colors.red),
                                   );
                                 },
                               ),
@@ -185,101 +200,6 @@ class VistaPaseListState extends State<VistaPaseList> {
                       );
                     }).toList(),
                   ),
-                ),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    FloatingActionButton(
-                      onPressed: _toggleCalendario,
-                      child: const Icon(Icons.calendar_today),
-                    ),
-                    const SizedBox(height: 16),
-                    FloatingActionButton(
-                      onPressed: () {
-                        final alumnos = snapshot.data!.docs;
-                        final totalAlumnos = alumnos.length;
-                        final alumnosPresentes = asistenciaActual.values
-                            .where((presente) => presente)
-                            .length;
-                        final alumnosAusentes = totalAlumnos - alumnosPresentes;
-
-                        showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return AlertDialog(
-                              title: const Text('Información de asistencia'),
-                              content: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text('Total de alumnos: $totalAlumnos'),
-                                  Text('Alumnos presentes: $alumnosPresentes'),
-                                  Text('Alumnos ausentes: $alumnosAusentes'),
-                                ],
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('Cerrar'),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                      },
-                      child: const Icon(Icons.info),
-                    ),
-                    const SizedBox(height: 16),
-                    FloatingActionButton(
-                      onPressed: () {
-                        final alumnos = snapshot.data!.docs;
-                        String asistenciaTexto = '';
-                        for (var alumno in alumnos) {
-                          final nombreAlumno = (alumno.data()
-                                  as Map<String, dynamic>)['nombre'] ??
-                              '';
-                          final alumnoId = alumno.id;
-                          final presente = asistenciaActual[alumnoId] ?? false;
-                          asistenciaTexto +=
-                              '$nombreAlumno: ${presente ? 'Presente' : 'Ausente'}\n';
-                        }
-
-                        showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return AlertDialog(
-                              title: const Text('Lista de asistencia'),
-                              content: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Expanded(
-                                    child: SingleChildScrollView(
-                                      child: Text(asistenciaTexto),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('Cerrar'),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    // Aquí puedes implementar la funcionalidad de compartir
-                                    // el texto de asistenciaTexto.
-                                  },
-                                  child: const Text('Compartir'),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                      },
-                      child: const Icon(Icons.list),
-                    ),
-                  ],
                 ),
               ],
             );
