@@ -1,5 +1,8 @@
+import 'package:pdf/pdf.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:share_plus/share_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:school_management_app/Modelo/modelo_clase.dart';
 
@@ -41,7 +44,7 @@ class VistaPaseListState extends State<VistaPaseList> {
           .doc(documentId)
           .set({'estado': estado});
     } catch (e) {
-      print('Error al guardar la asistencia: $e');
+      // Manejo de errores
     }
   }
 
@@ -102,16 +105,156 @@ class VistaPaseListState extends State<VistaPaseList> {
     });
   }
 
+  Future<void> _compartirListaPDF() async {
+    final pdf = await _generarPDF();
+    final bytes = await pdf.save();
+    await Share.shareXFiles(
+        [XFile.fromData(bytes, name: 'lista_asistencia.pdf')]);
+  }
+
+  Future<pw.Document> _generarPDF() async {
+    final asistencias = await _obtenerAsistencias();
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Column(children: [
+            pw.Header(
+              level: 0,
+              child: pw.Text('Lista de Asistencia'),
+            ),
+            pw.TableHelper.fromTextArray(
+              context: context,
+              data: [
+                ['Alumno', ..._dias],
+                ...asistencias.map(
+                  (asistencia) =>
+                      [asistencia['nombre'], ...asistencia['asistencias']],
+                )
+              ],
+            ),
+          ]);
+        },
+      ),
+    );
+
+    return pdf;
+  }
+
+  Future<List<Map<String, dynamic>>> _obtenerAsistencias() async {
+    final alumnosSnapshot = await _firestore
+        .collection('Profesores')
+        .doc(widget.clase.profesorId)
+        .collection('Clases')
+        .doc(widget.clase.id)
+        .collection('alumnos')
+        .get();
+
+    final alumnos = alumnosSnapshot.docs
+        .map(
+          (doc) => {
+            'id': doc.id,
+            'nombre': doc.data()['nombre'],
+            'asistencias': List.filled(_dias.length, ''),
+            'estado':
+                -1, // Inicialmente se asume que el alumno no ha sido marcado
+          },
+        )
+        .toList();
+
+    for (final alumno in alumnos) {
+      final asistenciasSnapshot = await _firestore
+          .collection('Profesores')
+          .doc(widget.clase.profesorId)
+          .collection('Clases')
+          .doc(widget.clase.id)
+          .collection('alumnos')
+          .doc(alumno['id'])
+          .collection('asistencias')
+          .get();
+
+      for (final asistencia in asistenciasSnapshot.docs) {
+        final dia = asistencia.id.split('-').first;
+        final indice = _dias.indexOf(dia);
+        final estado = asistencia.data()['estado'];
+        alumno['asistencias'][indice] = _asistenciaToString(estado);
+        alumno['estado'] = estado; // Actualizar el estado del alumno
+      }
+    }
+
+    return alumnos.cast<Map<String, dynamic>>();
+  }
+
+  String _asistenciaToString(int estado) {
+    switch (estado) {
+      case -1:
+        return '-';
+      case 0:
+        return 'A';
+      case 1:
+        return 'P';
+      case 2:
+        return 'R';
+      default:
+        return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         actions: [
           IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: () async {
+              final asistencias = await _obtenerAsistencias();
+              final totalAlumnos = asistencias.length;
+              final presentes = asistencias
+                  .where((asistencia) => asistencia['estado'] == 1)
+                  .length;
+              final ausentes = asistencias
+                  .where((asistencia) =>
+                      asistencia['estado'] == 0 ||
+                      asistencia['estado'] == -1 ||
+                      asistencia['estado'] == 2)
+                  .length;
+
+              if (mounted) {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Información de Asistencia'),
+                    content: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('Total de alumnos: $totalAlumnos'),
+                        Text('Presentes: $presentes'),
+                        Text('Ausentes: $ausentes'),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cerrar'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: _compartirListaPDF,
+          ),
+          IconButton(
             icon: const Icon(Icons.calendar_today),
             onPressed: _toggleCalendario,
           ),
-          // Otros IconButtons aquí
         ],
       ),
       body: StreamBuilder<QuerySnapshot>(
