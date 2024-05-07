@@ -43,6 +43,9 @@ class VistaPaseListState extends State<VistaPaseList> {
           .collection('asistencias')
           .doc(documentId)
           .set({'estado': estado});
+
+      // Actualiza el estado de la asistencia en la interfaz de usuario
+      setState(() {});
     } catch (e) {
       // Manejo de errores
     }
@@ -97,10 +100,26 @@ class VistaPaseListState extends State<VistaPaseList> {
 
   void _actualizarFecha(DateTime fecha) {
     setState(() {
-      if (fecha.weekday == DateTime.monday) {
+      if (fecha.weekday >= DateTime.monday &&
+          fecha.weekday <= DateTime.friday) {
         _fechaSeleccionada = fecha;
       } else {
-        _fechaSeleccionada = fecha.subtract(Duration(days: fecha.weekday - 1));
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Fecha no válida'),
+              content: const Text(
+                  'Por favor, selecciona un día entre lunes y viernes.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Aceptar'),
+                ),
+              ],
+            );
+          },
+        );
       }
     });
   }
@@ -206,6 +225,7 @@ class VistaPaseListState extends State<VistaPaseList> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.info_outline),
@@ -247,9 +267,10 @@ class VistaPaseListState extends State<VistaPaseList> {
               }
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: _compartirListaPDF,
+          const IconButton(
+            icon: Icon(Icons.share),
+            //onPressed: _compartirListaPDF,
+            onPressed: null,
           ),
           IconButton(
             icon: const Icon(Icons.calendar_today),
