@@ -26,6 +26,9 @@ class VistaPaseListState extends State<VistaPaseList> {
   ];
   DateTime _fechaSeleccionada = DateTime.now();
   bool _mostrarCalendario = false;
+  late DateTime _diaActual;
+  bool _diaSeleccionado = false;
+  DateTime? _fechaSeleccionadaOculta;
 
   Future<void> guardarAsistencia(
       String alumnoId, int estado, String dia) async {
@@ -95,6 +98,11 @@ class VistaPaseListState extends State<VistaPaseList> {
   void _toggleCalendario() {
     setState(() {
       _mostrarCalendario = !_mostrarCalendario;
+      if (!_mostrarCalendario && _diaSeleccionado) {
+        _fechaSeleccionadaOculta = _fechaSeleccionada;
+      } else {
+        _fechaSeleccionadaOculta = null;
+      }
     });
   }
 
@@ -103,6 +111,8 @@ class VistaPaseListState extends State<VistaPaseList> {
       if (fecha.weekday >= DateTime.monday &&
           fecha.weekday <= DateTime.friday) {
         _fechaSeleccionada = fecha;
+        _diaSeleccionado = true;
+        _toggleCalendario(); // Ocultar el calendario después de seleccionar una fecha válida
       } else {
         showDialog(
           context: context,
@@ -192,6 +202,13 @@ class VistaPaseListState extends State<VistaPaseList> {
           .collection('alumnos')
           .doc(alumno['id'])
           .collection('asistencias')
+          .where('id',
+              isGreaterThanOrEqualTo: DateFormat('yyyy-MM-dd')
+                  .format(_diaSeleccionado ? _fechaSeleccionada : _diaActual))
+          .where('id',
+              isLessThanOrEqualTo: DateFormat('yyyy-MM-dd').format(
+                  (_diaSeleccionado ? _fechaSeleccionada : _diaActual)
+                      .add(const Duration(days: 1))))
           .get();
 
       for (final asistencia in asistenciasSnapshot.docs) {
@@ -219,6 +236,12 @@ class VistaPaseListState extends State<VistaPaseList> {
       default:
         return '';
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _diaActual = DateTime.now();
   }
 
   @override
@@ -331,7 +354,7 @@ class VistaPaseListState extends State<VistaPaseList> {
                                     .doc(alumnoId)
                                     .collection('asistencias')
                                     .doc(
-                                        '$dia-${DateFormat('yyyy-MM-dd').format(_fechaSeleccionada)}')
+                                        '$dia-${DateFormat('yyyy-MM-dd').format(_diaSeleccionado ? _fechaSeleccionada : _diaActual)}')
                                     .snapshots(),
                                 builder: (context, snapshot) {
                                   final estado = snapshot.hasData &&
@@ -340,12 +363,29 @@ class VistaPaseListState extends State<VistaPaseList> {
                                               dynamic>)['estado'] ??
                                           0
                                       : 0;
+                                  final Map<String, int> diasSemana = {
+                                    'Lunes': DateTime.monday,
+                                    'Martes': DateTime.tuesday,
+                                    'Miércoles': DateTime.wednesday,
+                                    'Jueves': DateTime.thursday,
+                                    'Viernes': DateTime.friday,
+                                  };
+                                  final esSeleccionable = (_diaSeleccionado &&
+                                          dia ==
+                                              _dias[_fechaSeleccionada.weekday -
+                                                  1]) ||
+                                      (!_diaSeleccionado &&
+                                          _diaActual.weekday ==
+                                              diasSemana[dia] &&
+                                          _fechaSeleccionadaOculta == null);
                                   return GestureDetector(
-                                    onTap: () {
-                                      final nuevoValor = (estado + 1) % 3;
-                                      guardarAsistencia(
-                                          alumnoId, nuevoValor, dia);
-                                    },
+                                    onTap: esSeleccionable
+                                        ? () {
+                                            final nuevoValor = (estado + 1) % 3;
+                                            guardarAsistencia(
+                                                alumnoId, nuevoValor, dia);
+                                          }
+                                        : null,
                                     child: estado == 0
                                         ? const Icon(Icons.remove,
                                             color: Colors.grey)
