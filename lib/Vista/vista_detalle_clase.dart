@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:school_management_app/Vista/vista_tareas.dart';
 import 'package:school_management_app/Modelo/modelo_clase.dart';
 import 'package:school_management_app/Vista/vista_examenes.dart';
+import 'package:school_management_app/Vista/vista_actividades.dart';
 import 'package:school_management_app/Vista/vista_calificaciones.dart';
 import 'package:school_management_app/Vista/vista_pase_lista.dart'; // Importa las nuevas vistas aquí
 
@@ -21,7 +22,7 @@ class DetalleClaseState extends State<DetalleClase>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -42,6 +43,7 @@ class DetalleClaseState extends State<DetalleClase>
             Tab(text: 'Calificaciones'),
             Tab(text: 'Tareas'),
             Tab(text: 'Exámenes'),
+            Tab(text: 'Actividades'),
           ],
         ),
       ),
@@ -52,6 +54,7 @@ class DetalleClaseState extends State<DetalleClase>
           VistaCalificaciones(clase: widget.clase),
           VistaTareas(clase: widget.clase),
           VistaExamenes(clase: widget.clase),
+          VistaActividades(clase: widget.clase),
         ],
       ),
     );
