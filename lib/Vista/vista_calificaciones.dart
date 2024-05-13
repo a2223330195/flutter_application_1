@@ -21,7 +21,7 @@ class VistaCalificacionesState extends State<VistaCalificaciones> {
     Ponderacion(nombre: 'Actividades', valor: 0.2),
     Ponderacion(nombre: 'Asistencia', valor: 0.1),
   ];
-  double _sumaPonderaciones = 1.0;
+  double sumaPonderaciones = 1.0;
 
   Future<void> _modificarPonderaciones() async {
     final ponderacionesModificadas = await showDialog<List<Ponderacion>>(

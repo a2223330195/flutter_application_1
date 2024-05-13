@@ -1,8 +1,5 @@
-import 'package:pdf/pdf.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:share_plus/share_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:school_management_app/Modelo/modelo_clase.dart';
 
@@ -29,6 +26,108 @@ class VistaPaseListState extends State<VistaPaseList> {
   late DateTime _diaActual;
   bool _diaSeleccionado = false;
   DateTime? _fechaSeleccionadaOculta;
+
+  Future<Widget> buildAsistenciaInfo() async {
+    final asistencias = await _obtenerAsistencias();
+    final totalAlumnos = asistencias.length;
+    final presentes =
+        asistencias.where((asistencia) => asistencia['estado'] == 1).length;
+    final ausentes = asistencias
+        .where((asistencia) =>
+            asistencia['estado'] == 0 ||
+            asistencia['estado'] == -1 ||
+            asistencia['estado'] == 2)
+        .length;
+
+    final fechaFormateada = _diaSeleccionado
+        ? DateFormat('EEEE, d MMMM yyyy').format(_fechaSeleccionada)
+        : DateFormat('EEEE, d MMMM yyyy').format(_diaActual);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.people),
+            const SizedBox(width: 4),
+            Text('$totalAlumnos'),
+          ],
+        ),
+        Row(
+          children: [
+            const Icon(Icons.check_box, color: Colors.green),
+            const SizedBox(width: 4),
+            Text('$presentes'),
+          ],
+        ),
+        Row(
+          children: [
+            const Icon(Icons.indeterminate_check_box, color: Colors.red),
+            const SizedBox(width: 4),
+            Text('$ausentes'),
+          ],
+        ),
+        Text(fechaFormateada),
+      ],
+    );
+  }
+
+  Future<PreferredSizeWidget> _buildAppBar() async {
+    final asistencias = await _obtenerAsistencias();
+    final totalAlumnos = asistencias.length;
+    final presentes =
+        asistencias.where((asistencia) => asistencia['estado'] == 1).length;
+    final ausentes = asistencias
+        .where((asistencia) =>
+            asistencia['estado'] == 0 ||
+            asistencia['estado'] == -1 ||
+            asistencia['estado'] == 2)
+        .length;
+
+    final fechaFormateada = _diaSeleccionado
+        ? DateFormat('d MMM yyyy').format(_fechaSeleccionada)
+        : DateFormat('d MMM yyyy').format(_diaActual);
+
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(60.0),
+      child: AppBar(
+        automaticallyImplyLeading: false,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.people),
+                const SizedBox(width: 4),
+                Text('$totalAlumnos'),
+              ],
+            ),
+            Row(
+              children: [
+                const Icon(Icons.check_box, color: Colors.green),
+                const SizedBox(width: 4),
+                Text('$presentes'),
+              ],
+            ),
+            Row(
+              children: [
+                const Icon(Icons.indeterminate_check_box, color: Colors.red),
+                const SizedBox(width: 4),
+                Text('$ausentes'),
+              ],
+            ),
+            Text(fechaFormateada),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_today),
+            onPressed: _toggleCalendario,
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> guardarAsistencia(
       String alumnoId, int estado, String dia) async {
@@ -134,44 +233,6 @@ class VistaPaseListState extends State<VistaPaseList> {
     });
   }
 
-  Future<void> _compartirListaPDF() async {
-    final pdf = await _generarPDF();
-    final bytes = await pdf.save();
-    await Share.shareXFiles(
-        [XFile.fromData(bytes, name: 'lista_asistencia.pdf')]);
-  }
-
-  Future<pw.Document> _generarPDF() async {
-    final asistencias = await _obtenerAsistencias();
-    final pdf = pw.Document();
-
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (pw.Context context) {
-          return pw.Column(children: [
-            pw.Header(
-              level: 0,
-              child: pw.Text('Lista de Asistencia'),
-            ),
-            pw.TableHelper.fromTextArray(
-              context: context,
-              data: [
-                ['Alumno', ..._dias],
-                ...asistencias.map(
-                  (asistencia) =>
-                      [asistencia['nombre'], ...asistencia['asistencias']],
-                )
-              ],
-            ),
-          ]);
-        },
-      ),
-    );
-
-    return pdf;
-  }
-
   Future<List<Map<String, dynamic>>> _obtenerAsistencias() async {
     final alumnosSnapshot = await _firestore
         .collection('Profesores')
@@ -246,176 +307,142 @@ class VistaPaseListState extends State<VistaPaseList> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.info_outline),
-            onPressed: () async {
-              final asistencias = await _obtenerAsistencias();
-              final totalAlumnos = asistencias.length;
-              final presentes = asistencias
-                  .where((asistencia) => asistencia['estado'] == 1)
-                  .length;
-              final ausentes = asistencias
-                  .where((asistencia) =>
-                      asistencia['estado'] == 0 ||
-                      asistencia['estado'] == -1 ||
-                      asistencia['estado'] == 2)
-                  .length;
+    return FutureBuilder<PreferredSizeWidget>(
+      future: _buildAppBar(),
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          return Scaffold(
+            appBar: snapshot.data,
+            body: StreamBuilder<QuerySnapshot>(
+              stream: _firestore
+                  .collection('Profesores')
+                  .doc(widget.clase.profesorId)
+                  .collection('Clases')
+                  .doc(widget.clase.id)
+                  .collection('alumnos')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  final alumnos = snapshot.data!.docs;
+                  final DateTime fechaActual = DateTime.now();
+                  final DateTime primerDiaDelMes =
+                      DateTime(fechaActual.year, fechaActual.month, 1);
+                  final DateTime ultimoDiaDelMes =
+                      DateTime(fechaActual.year, fechaActual.month + 1, 0);
 
-              if (mounted) {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Información de Asistencia'),
-                    content: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('Total de alumnos: $totalAlumnos'),
-                        Text('Presentes: $presentes'),
-                        Text('Ausentes: $ausentes'),
-                      ],
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cerrar'),
+                  return Column(
+                    children: [
+                      if (_mostrarCalendario)
+                        CalendarDatePicker(
+                          initialDate: _fechaSeleccionada,
+                          firstDate: primerDiaDelMes,
+                          lastDate: ultimoDiaDelMes,
+                          onDateChanged: _actualizarFecha,
+                        ),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          columns: [
+                            const DataColumn(label: Text('Alumno')),
+                            ..._dias.map((dia) => DataColumn(label: Text(dia))),
+                          ],
+                          rows: alumnos.map((alumno) {
+                            final nombreAlumno = (alumno.data()
+                                    as Map<String, dynamic>)['nombre'] ??
+                                '';
+                            final alumnoId = alumno.id;
+                            return DataRow(
+                              cells: [
+                                DataCell(Text(nombreAlumno)),
+                                ..._dias.map(
+                                  (dia) => DataCell(
+                                    StreamBuilder<DocumentSnapshot>(
+                                      stream: _firestore
+                                          .collection('Profesores')
+                                          .doc(widget.clase.profesorId)
+                                          .collection('Clases')
+                                          .doc(widget.clase.id)
+                                          .collection('alumnos')
+                                          .doc(alumnoId)
+                                          .collection('asistencias')
+                                          .doc(
+                                              '$dia-${DateFormat('yyyy-MM-dd').format(_diaSeleccionado ? _fechaSeleccionada : _diaActual)}')
+                                          .snapshots(),
+                                      builder: (context, snapshot) {
+                                        final estado = snapshot.hasData &&
+                                                snapshot.data!.data() != null
+                                            ? (snapshot.data!.data() as Map<
+                                                    String,
+                                                    dynamic>)['estado'] ??
+                                                0
+                                            : 0;
+                                        final Map<String, int> diasSemana = {
+                                          'Lunes': DateTime.monday,
+                                          'Martes': DateTime.tuesday,
+                                          'Miércoles': DateTime.wednesday,
+                                          'Jueves': DateTime.thursday,
+                                          'Viernes': DateTime.friday,
+                                        };
+                                        final esSeleccionable =
+                                            (_diaSeleccionado &&
+                                                    dia ==
+                                                        _dias[
+                                                            _fechaSeleccionada
+                                                                    .weekday -
+                                                                1]) ||
+                                                (!_diaSeleccionado &&
+                                                    _diaActual
+                                                            .weekday ==
+                                                        diasSemana[dia] &&
+                                                    _fechaSeleccionadaOculta ==
+                                                        null);
+                                        return GestureDetector(
+                                          onTap: esSeleccionable
+                                              ? () {
+                                                  final nuevoValor =
+                                                      (estado + 1) % 3;
+                                                  guardarAsistencia(alumnoId,
+                                                      nuevoValor, dia);
+                                                }
+                                              : null,
+                                          child: estado == 0
+                                              ? const Icon(Icons.remove,
+                                                  color: Colors.grey)
+                                              : estado == 1
+                                                  ? const Icon(Icons.check_box,
+                                                      color: Colors.green)
+                                                  : const Icon(
+                                                      Icons
+                                                          .indeterminate_check_box,
+                                                      color: Colors.red),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }).toList(),
+                        ),
                       ),
                     ],
-                  ),
-                );
-              }
-            },
-          ),
-          const IconButton(
-            icon: Icon(Icons.share),
-            //onPressed: _compartirListaPDF,
-            onPressed: null,
-          ),
-          IconButton(
-            icon: const Icon(Icons.calendar_today),
-            onPressed: _toggleCalendario,
-          ),
-        ],
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore
-            .collection('Profesores')
-            .doc(widget.clase.profesorId)
-            .collection('Clases')
-            .doc(widget.clase.id)
-            .collection('alumnos')
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasData) {
-            final alumnos = snapshot.data!.docs;
-            final DateTime fechaActual = DateTime.now();
-            final DateTime primerDiaDelMes =
-                DateTime(fechaActual.year, fechaActual.month, 1);
-            final DateTime ultimoDiaDelMes =
-                DateTime(fechaActual.year, fechaActual.month + 1, 0);
-
-            return Column(
-              children: [
-                if (_mostrarCalendario)
-                  CalendarDatePicker(
-                    initialDate: _fechaSeleccionada,
-                    firstDate: primerDiaDelMes,
-                    lastDate: ultimoDiaDelMes,
-                    onDateChanged: _actualizarFecha,
-                  ),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    columns: [
-                      const DataColumn(label: Text('Alumno')),
-                      ..._dias.map((dia) => DataColumn(label: Text(dia))),
-                    ],
-                    rows: alumnos.map((alumno) {
-                      final nombreAlumno =
-                          (alumno.data() as Map<String, dynamic>)['nombre'] ??
-                              '';
-                      final alumnoId = alumno.id;
-                      return DataRow(
-                        cells: [
-                          DataCell(Text(nombreAlumno)),
-                          ..._dias.map(
-                            (dia) => DataCell(
-                              StreamBuilder<DocumentSnapshot>(
-                                stream: _firestore
-                                    .collection('Profesores')
-                                    .doc(widget.clase.profesorId)
-                                    .collection('Clases')
-                                    .doc(widget.clase.id)
-                                    .collection('alumnos')
-                                    .doc(alumnoId)
-                                    .collection('asistencias')
-                                    .doc(
-                                        '$dia-${DateFormat('yyyy-MM-dd').format(_diaSeleccionado ? _fechaSeleccionada : _diaActual)}')
-                                    .snapshots(),
-                                builder: (context, snapshot) {
-                                  final estado = snapshot.hasData &&
-                                          snapshot.data!.data() != null
-                                      ? (snapshot.data!.data() as Map<String,
-                                              dynamic>)['estado'] ??
-                                          0
-                                      : 0;
-                                  final Map<String, int> diasSemana = {
-                                    'Lunes': DateTime.monday,
-                                    'Martes': DateTime.tuesday,
-                                    'Miércoles': DateTime.wednesday,
-                                    'Jueves': DateTime.thursday,
-                                    'Viernes': DateTime.friday,
-                                  };
-                                  final esSeleccionable = (_diaSeleccionado &&
-                                          dia ==
-                                              _dias[_fechaSeleccionada.weekday -
-                                                  1]) ||
-                                      (!_diaSeleccionado &&
-                                          _diaActual.weekday ==
-                                              diasSemana[dia] &&
-                                          _fechaSeleccionadaOculta == null);
-                                  return GestureDetector(
-                                    onTap: esSeleccionable
-                                        ? () {
-                                            final nuevoValor = (estado + 1) % 3;
-                                            guardarAsistencia(
-                                                alumnoId, nuevoValor, dia);
-                                          }
-                                        : null,
-                                    child: estado == 0
-                                        ? const Icon(Icons.remove,
-                                            color: Colors.grey)
-                                        : estado == 1
-                                            ? const Icon(Icons.check_box,
-                                                color: Colors.green)
-                                            : const Icon(
-                                                Icons.indeterminate_check_box,
-                                                color: Colors.red),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
-            );
-          } else {
-            return const Center(child: CircularProgressIndicator());
-          }
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _agregarAlumno,
-        child: const Icon(Icons.add),
-      ),
+                  );
+                } else {
+                  return const Center(child: CircularProgressIndicator());
+                }
+              },
+            ),
+            floatingActionButton: FloatingActionButton(
+              onPressed: _agregarAlumno,
+              child: const Icon(Icons.add),
+            ),
+          );
+        } else {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+      },
     );
   }
 }
