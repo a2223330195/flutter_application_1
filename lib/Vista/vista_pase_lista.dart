@@ -263,14 +263,7 @@ class VistaPaseListState extends State<VistaPaseList> {
           .collection('alumnos')
           .doc(alumno['id'])
           .collection('asistencias')
-          .where('id',
-              isGreaterThanOrEqualTo: DateFormat('yyyy-MM-dd')
-                  .format(_diaSeleccionado ? _fechaSeleccionada : _diaActual))
-          .where('id',
-              isLessThanOrEqualTo: DateFormat('yyyy-MM-dd').format(
-                  (_diaSeleccionado ? _fechaSeleccionada : _diaActual)
-                      .add(const Duration(days: 1))))
-          .get();
+          .get(); // Obtener todas las asistencias sin filtrar por fecha
 
       for (final asistencia in asistenciasSnapshot.docs) {
         final dia = asistencia.id.split('-').first;
