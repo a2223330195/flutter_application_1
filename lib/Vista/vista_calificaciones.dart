@@ -20,6 +20,7 @@ class VistaCalificacionesState extends State<VistaCalificaciones> {
     Ponderacion(nombre: 'Exámenes', valor: 0.4),
     Ponderacion(nombre: 'Actividades', valor: 0.2),
     Ponderacion(nombre: 'Asistencia', valor: 0.1),
+    Ponderacion(nombre: 'Proyectos', valor: 0.2),
   ];
   double sumaPonderaciones = 1.0;
 
@@ -114,6 +115,7 @@ class VistaCalificacionesState extends State<VistaCalificaciones> {
         .get();
 
     for (final tarea in tareasSnapshot.docs) {
+      final double puntajeTarea = tarea.data()['puntaje'];
       final entregasSnapshot =
           await tarea.reference.collection('entregas').get();
 
@@ -122,14 +124,39 @@ class VistaCalificacionesState extends State<VistaCalificaciones> {
         final entregada = entrega.data()['entregada'];
 
         if (entregada) {
-          calificacionesTareas[alumnoId] = tarea.data()['puntaje'];
-        } else {
-          calificacionesTareas[alumnoId] = 0.0;
+          calificacionesTareas[alumnoId] =
+              (calificacionesTareas[alumnoId] ?? 0.0) + puntajeTarea;
         }
       }
     }
 
     return calificacionesTareas;
+  }
+
+  Future<Map<String, double>> _obtenerCalificacionesProyectos() async {
+    final Map<String, double> calificacionesProyectos = {};
+
+    final proyectosSnapshot = await _firestore
+        .collection('Profesores')
+        .doc(widget.clase.profesorId)
+        .collection('Clases')
+        .doc(widget.clase.id)
+        .collection('proyectos')
+        .get();
+
+    for (final proyecto in proyectosSnapshot.docs) {
+      final entregasSnapshot =
+          await proyecto.reference.collection('entregas').get();
+
+      for (final entrega in entregasSnapshot.docs) {
+        final alumnoId = entrega.data()['alumnoId'];
+        final calificacion = entrega.data()['calificacion'];
+
+        calificacionesProyectos[alumnoId] = calificacion;
+      }
+    }
+
+    return calificacionesProyectos;
   }
 
   Future<Map<String, double>> _obtenerCalificacionesExamenes() async {
@@ -171,6 +198,7 @@ class VistaCalificacionesState extends State<VistaCalificaciones> {
         .get();
 
     for (final actividad in actividadesSnapshot.docs) {
+      final double puntajeActividad = actividad.data()['puntaje'];
       final entregasSnapshot =
           await actividad.reference.collection('entregas').get();
 
@@ -179,9 +207,8 @@ class VistaCalificacionesState extends State<VistaCalificaciones> {
         final entregada = entrega.data()['entregada'];
 
         if (entregada) {
-          calificacionesActividades[alumnoId] = actividad.data()['puntaje'];
-        } else {
-          calificacionesActividades[alumnoId] = 0.0;
+          calificacionesActividades[alumnoId] =
+              (calificacionesActividades[alumnoId] ?? 0.0) + puntajeActividad;
         }
       }
     }
@@ -205,11 +232,19 @@ class VistaCalificacionesState extends State<VistaCalificaciones> {
       final asistenciasSnapshot =
           await alumno.reference.collection('asistencias').get();
 
-      final totalAsistencias = asistenciasSnapshot.size;
-      final asistenciasPresente = asistenciasSnapshot.docs
-          .where((doc) => doc.data()['estado'] == 1)
-          .length;
+      int asistenciasPresente = 0;
+      int asistenciasFaltante = 0;
 
+      for (final asistencia in asistenciasSnapshot.docs) {
+        final estado = asistencia.data()['estado'];
+        if (estado == 1) {
+          asistenciasPresente++;
+        } else if (estado == 0 || estado == 2) {
+          asistenciasFaltante++;
+        }
+      }
+
+      final totalAsistencias = asistenciasPresente + asistenciasFaltante;
       final porcentajeAsistencia =
           totalAsistencias > 0 ? asistenciasPresente / totalAsistencias : 0.0;
 
@@ -250,6 +285,7 @@ class VistaCalificacionesState extends State<VistaCalificaciones> {
                   DataColumn(label: Text('Calificación Exámenes')),
                   DataColumn(label: Text('Calificación Actividades')),
                   DataColumn(label: Text('Calificación Asistencia')),
+                  DataColumn(label: Text('Calificación Proyectos')),
                   DataColumn(label: Text('Calificación Final')),
                 ],
                 rows: calificacionesFinales.map((alumno) {
@@ -264,6 +300,8 @@ class VistaCalificacionesState extends State<VistaCalificaciones> {
                           .toStringAsFixed(2))),
                       DataCell(Text(
                           alumno['calificacionAsistencia'].toStringAsFixed(2))),
+                      DataCell(Text(
+                          alumno['calificacionProyectos'].toStringAsFixed(2))),
                       DataCell(
                           Text(alumno['calificacionFinal'].toStringAsFixed(2))),
                     ],
@@ -282,6 +320,7 @@ class VistaCalificacionesState extends State<VistaCalificaciones> {
     final calificacionesExamenes = await _obtenerCalificacionesExamenes();
     final calificacionesActividades = await _obtenerCalificacionesActividades();
     final calificacionesAsistencia = await _obtenerCalificacionesAsistencia();
+    final calificacionesProyectos = await _obtenerCalificacionesProyectos();
 
     final alumnosSnapshot = await _firestore
         .collection('Profesores')
@@ -302,11 +341,15 @@ class VistaCalificacionesState extends State<VistaCalificaciones> {
       final calificacionActividades =
           calificacionesActividades[alumnoId] ?? 0.0;
       final calificacionAsistencia = calificacionesAsistencia[alumnoId] ?? 0.0;
+      final calificacionProyectos = calificacionesProyectos[alumnoId] ?? 0.0;
 
       final calificacionFinal = (calificacionTareas * _ponderaciones[0].valor) +
           (calificacionExamenes * _ponderaciones[1].valor) +
           (calificacionActividades * _ponderaciones[2].valor) +
-          (calificacionAsistencia * _ponderaciones[3].valor);
+          (calificacionAsistencia * _ponderaciones[3].valor) +
+          (calificacionProyectos *
+              _ponderaciones[4]
+                  .valor); // Agrega la ponderación de proyectos aquí
 
       calificacionesFinales.add({
         'nombre': nombre,
@@ -314,6 +357,7 @@ class VistaCalificacionesState extends State<VistaCalificaciones> {
         'calificacionExamenes': calificacionExamenes,
         'calificacionActividades': calificacionActividades,
         'calificacionAsistencia': calificacionAsistencia,
+        'calificacionProyectos': calificacionProyectos,
         'calificacionFinal': calificacionFinal,
       });
     }

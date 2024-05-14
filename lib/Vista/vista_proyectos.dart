@@ -13,6 +13,7 @@ class VistaProyectos extends StatefulWidget {
 
 class VistaProyectosState extends State<VistaProyectos> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  late double calificacion;
 
   @override
   Widget build(BuildContext context) {
@@ -103,56 +104,59 @@ class VistaProyectosState extends State<VistaProyectos> {
                     return DataRow(
                       cells: [
                         DataCell(Text(alumno.data()['nombre'])),
-                        ...proyectos.map((proyecto) => DataCell(
-                              StreamBuilder<
-                                  QuerySnapshot<Map<String, dynamic>>>(
-                                stream: _firestore
-                                    .collection('Profesores')
-                                    .doc(widget.clase.profesorId)
-                                    .collection('Clases')
-                                    .doc(widget.clase.id)
-                                    .collection('proyectos')
-                                    .doc(proyecto.id)
-                                    .collection('entregas')
-                                    .where('alumnoId', isEqualTo: alumno.id)
-                                    .snapshots(),
-                                builder: (context, entregasSnapshot) {
-                                  if (!entregasSnapshot.hasData) {
-                                    return const CircularProgressIndicator();
-                                  }
+                        ...proyectos.map(
+                          (proyecto) => DataCell(
+                            StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                              stream: _firestore
+                                  .collection('Profesores')
+                                  .doc(widget.clase.profesorId)
+                                  .collection('Clases')
+                                  .doc(widget.clase.id)
+                                  .collection('proyectos')
+                                  .doc(proyecto.id)
+                                  .collection('entregas')
+                                  .where('alumnoId', isEqualTo: alumno.id)
+                                  .snapshots(),
+                              builder: (context, entregasSnapshot) {
+                                if (!entregasSnapshot.hasData) {
+                                  return const CircularProgressIndicator();
+                                }
 
-                                  final entregas = entregasSnapshot.data!.docs;
-                                  final entregada = entregas.isNotEmpty &&
-                                      entregas.first.data()['entregada'];
+                                final entregas = entregasSnapshot.data!.docs;
+                                calificacion = entregas.isNotEmpty
+                                    ? entregas.first.data()['calificacion']
+                                    : 0.0;
 
-                                  return IconButton(
-                                    icon: Icon(
-                                      entregada
-                                          ? Icons.check_circle
-                                          : Icons.cancel,
-                                      color:
-                                          entregada ? Colors.green : Colors.red,
-                                    ),
-                                    onPressed: () async {
-                                      final proyectoRef = _firestore
-                                          .collection('Profesores')
-                                          .doc(widget.clase.profesorId)
-                                          .collection('Clases')
-                                          .doc(widget.clase.id)
-                                          .collection('proyectos')
-                                          .doc(proyecto.id)
-                                          .collection('entregas')
-                                          .doc(alumno.id);
+                                return TextField(
+                                  controller: TextEditingController()
+                                    ..text = calificacion.toString(),
+                                  keyboardType: TextInputType.number,
+                                  onSubmitted: (value) async {
+                                    final proyectoRef = _firestore
+                                        .collection('Profesores')
+                                        .doc(widget.clase.profesorId)
+                                        .collection('Clases')
+                                        .doc(widget.clase.id)
+                                        .collection('proyectos')
+                                        .doc(proyecto.id)
+                                        .collection('entregas')
+                                        .doc(alumno.id);
 
-                                      await proyectoRef.set({
-                                        'entregada': !entregada,
-                                        'alumnoId': alumno.id
-                                      });
-                                    },
-                                  );
-                                },
-                              ),
-                            )),
+                                    await proyectoRef.set({
+                                      'calificacion': double.parse(value),
+                                      'alumnoId': alumno.id
+                                    });
+
+                                    // Actualizar el estado local de la aplicación
+                                    setState(() {
+                                      calificacion = double.parse(value);
+                                    });
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        )
                       ],
                     );
                   }).toList(),
