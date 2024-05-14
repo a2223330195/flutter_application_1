@@ -35,18 +35,21 @@ class VistaCalificacionesState extends State<VistaCalificaciones> {
 
         return AlertDialog(
           title: const Text('Modificar Ponderaciones'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: _ponderaciones.asMap().entries.map((entry) {
-              final ponderacion = entry.value;
-              final controladorTexto = controladoresTexto[entry.key];
-              return TextField(
-                controller: controladorTexto,
-                decoration: InputDecoration(
-                  labelText: ponderacion.nombre,
-                ),
-              );
-            }).toList(),
+          content: SingleChildScrollView(
+            // Agregado aquí
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: _ponderaciones.asMap().entries.map((entry) {
+                final ponderacion = entry.value;
+                final controladorTexto = controladoresTexto[entry.key];
+                return TextField(
+                  controller: controladorTexto,
+                  decoration: InputDecoration(
+                    labelText: ponderacion.nombre,
+                  ),
+                );
+              }).toList(),
+            ),
           ),
           actions: [
             TextButton(
