@@ -36,10 +36,43 @@ class DetalleClaseState extends State<DetalleClase>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.clase.nombre),
+        title: Text(
+          widget.clase.nombre,
+          style: const TextStyle(
+            fontFamily: 'Roboto', // Cambia la tipografía a 'Roboto'
+            fontWeight: FontWeight.bold,
+            fontSize: 24, // Aumenta el tamaño de la fuente
+            color: Colors.white, // Cambia el color del texto a blanco
+          ),
+          textAlign: TextAlign.center, // Centra el texto
+        ),
+        backgroundColor: const Color.fromARGB(
+            255, 26, 144, 240), // Cambia el color de fondo del AppBar
+        // toolbarHeight: 80, // Duplica el tamaño del AppBar
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: <Color>[
+                Colors.black12,
+                Colors.black,
+              ],
+            ),
+          ),
+        ),
+        actions: <Widget>[
+          IconButton(
+            icon: Image.asset('lib/assets/imagen/logoicon2.png'),
+            tooltip: 'Carrito de Compras',
+            onPressed: () {},
+          ),
+        ],
         bottom: TabBar(
           isScrollable: true, // Agrega esta línea
           controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white,
           tabs: const [
             Tab(text: 'Pasar Lista'),
             Tab(text: 'Calificaciones'),

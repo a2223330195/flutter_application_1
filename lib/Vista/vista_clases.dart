@@ -98,11 +98,44 @@ class VistaClasesState extends State<VistaClases> {
       onWillPop: _onWillPop,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Mis Clases'),
+          title: const Text(
+            'Mis Clases',
+            style: TextStyle(
+              fontFamily: 'Roboto', // Cambia la tipografía a 'Roboto'
+              fontWeight: FontWeight.bold,
+              fontSize: 24, // Aumenta el tamaño de la fuente
+              color: Colors.white, // Cambia el color del texto a blanco
+            ),
+          ),
           leading: IconButton(
-            icon: const Icon(Icons.exit_to_app),
+            icon: const Icon(
+              Icons.exit_to_app,
+              size: 30, // Aumenta el tamaño del icono
+              color: Colors.white, // Cambia el color del icono a blanco
+            ),
             onPressed: _onWillPop,
           ),
+          backgroundColor: const Color.fromARGB(255, 26, 144, 240),
+          toolbarHeight: 80, // Duplica el tamaño del AppBar
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: <Color>[
+                  Colors.black12,
+                  Colors.black,
+                ],
+              ),
+            ),
+          ),
+          actions: <Widget>[
+            IconButton(
+              icon: Image.asset('lib/assets/imagen/logoicon2.png'),
+              tooltip: 'Carrito de Compras',
+              onPressed: () {},
+            ),
+          ],
         ),
         body: _currentUserUid != null
             ? StreamBuilder<QuerySnapshot>(
@@ -122,37 +155,48 @@ class VistaClasesState extends State<VistaClases> {
                   }
 
                   return ListView(
-                    children:
-                        snapshot.data?.docs.map((DocumentSnapshot document) {
-                              Clase clase = Clase.fromMap(
-                                document.data() as Map<String, dynamic>,
-                                document.id, // Agregar esta línea
+                    children: snapshot.data?.docs
+                            .map((DocumentSnapshot document) {
+                          Clase clase = Clase.fromMap(
+                            document.data() as Map<String, dynamic>,
+                            document.id, // Agregar esta línea
+                          );
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        DetalleClase(clase: clase)),
                               );
-                              return GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            DetalleClase(clase: clase)),
-                                  );
-                                },
-                                child: Card(
-                                  child: ListTile(
-                                    title: Text(
-                                      clase.nombre,
-                                      style: const TextStyle(
-                                        fontFamily: 'Arial',
-                                        fontSize: 20.0,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    // Agrega aquí cualquier otro campo que necesites mostrar en la lista
+                            },
+                            child: Card(
+                              color:
+                                  Colors.blue[100], // Cambia el color del Card
+                              elevation:
+                                  5, // Aumenta la elevación para darle un efecto de sombra
+                              child: ListTile(
+                                leading: const Icon(
+                                    Icons.class_), // Agrega un icono al inicio
+                                title: Text(
+                                  clase.nombre,
+                                  style: const TextStyle(
+                                    fontFamily: 'Arial',
+                                    fontSize: 20.0,
+                                    fontWeight: FontWeight
+                                        .bold, // Hace el texto en negrita
                                   ),
+                                  textAlign: TextAlign.center,
                                 ),
-                              );
-                            }).toList() ??
-                            [],
+                                subtitle: Text(
+                                    'Horario: ${clase.horario}'), // Agrega un subtítulo
+                                trailing: const Icon(Icons
+                                    .arrow_forward), // Agrega un icono al final
+                              ),
+                            ),
+                          );
+                        }).toList() ??
+                        [],
                   );
                 },
               )

@@ -41,3 +41,7 @@ flutter:
   uses-material-design: true
   assets:
   - lib/assets/imagen/imagen01.jpg
+  - lib/assets/imagen/logomain1.jpg
+  - lib/assets/imagen/logomain2.png
+  - lib/assets/imagen/googleicon.png
+  - lib/assets/imagen/logoicon2.png

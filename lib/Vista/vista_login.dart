@@ -80,21 +80,36 @@ class VistaLoginState extends State<VistaLogin> {
     return WillPopScope(
       onWillPop: () async => true,
       child: MaterialApp(
+        debugShowCheckedModeBanner: false,
         home: Scaffold(
-          appBar: AppBar(
-            title: const Text('Administrar clases'),
-          ),
+          backgroundColor: const Color(0xFF53D4FB),
+          // appBar: AppBar(
+          //   title: const Text('Administrar clases'),
+          // ),
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 Container(
                   margin: const EdgeInsets.all(20.0),
-                  child: Image.asset('lib/assets/imagen/imagen01.jpg'),
+                  child: Center(
+                    child: Image.asset(
+                      'lib/assets/imagen/logomain2.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+                const SizedBox(
+                  height: 30,
                 ),
                 const Text(
-                  'Bienvenido',
-                  style: TextStyle(fontSize: 24),
+                  'Toque para iniciar sesión',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontFamily: 'Impact',
+                  ),
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
@@ -110,7 +125,10 @@ class VistaLoginState extends State<VistaLogin> {
                       );
                     }
                   },
-                  child: const Text('Sign in with Google'),
+                  child: Image.asset(
+                    'lib/assets/imagen/googleicon.png',
+                    width: 32,
+                  ),
                 ),
               ],
             ),
